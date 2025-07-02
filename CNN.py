@@ -58,13 +58,12 @@ def train_model(model, optimizer, train_loader, valid_loader,
 
     # Initialize trackers, these are not parameters and should not be changed
     stale = 0
-    best_acc = 0
+    best_MSE = 1e+9
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     def _train():
         model.train()
         train_loss = []
-        train_accs = []
 
         for batch in tqdm(train_loader):
             imgs, labels = batch
@@ -74,49 +73,49 @@ def train_model(model, optimizer, train_loader, valid_loader,
             loss.backward()
             nn.utils.clip_grad_norm_(model.parameters(), max_norm=10)
             optimizer.step()
-            acc = (logits.argmax(dim=-1) == labels.to(device)).float().mean()
+            # acc = (logits.argmax(dim=-1) == labels.to(device)).float().mean()
             train_loss.append(loss.item())
-            train_accs.append(acc)
+            # train_accs.append(acc)
 
         train_loss = sum(train_loss) / len(train_loss)
-        train_acc = sum(train_accs) / len(train_accs)
+        # train_acc = sum(train_accs) / len(train_accs)
         train_losses.append(train_loss)
-        print(f"[ Train | {epoch + 1:03d}/{n_epochs:03d} ] loss = {train_loss:.5f}, acc = {train_acc:.5f}")
+        print(f"[ Train | {epoch + 1:03d}/{n_epochs:03d} ] loss = {train_loss:.5g}")
 
     def _validate(record=True):
         model.eval()
         valid_loss = []
-        valid_accs = []
-        nonlocal best_acc
+        # valid_accs = []
+        nonlocal best_MSE
 
         for batch in tqdm(valid_loader):
             imgs, labels = batch
             with torch.no_grad():
                 logits = model(imgs.to(device))
             loss = criterion(logits, labels.to(device))
-            acc = (logits.argmax(dim=-1) == labels.to(device)).float().mean()
+            # acc = (logits.argmax(dim=-1) == labels.to(device)).float().mean()
             valid_loss.append(loss.item())
-            valid_accs.append(acc)
+            # valid_accs.append(acc)
 
         valid_loss = sum(valid_loss) / len(valid_loss)
-        valid_acc = sum(valid_accs) / len(valid_accs)
+        # valid_acc = sum(valid_accs) / len(valid_accs)
         if record:
             valid_losses.append(valid_loss)
-        print(f"[ Valid | {epoch + 1:03d}/{n_epochs:03d} ] loss = {valid_loss:.5f}, acc = {valid_acc:.5f}")
+        print(f"[ Valid | {epoch + 1:03d}/{n_epochs:03d} ] loss = {valid_loss:.5g}")
 
 
         # update logs
-        if valid_acc > best_acc:
+        if valid_loss < best_MSE:
             with open(f"./{prefix}_log.txt","a"):
-                print(f"[ Valid | {epoch + 1:03d}/{n_epochs:03d} ] loss = {valid_loss:.5f}, acc = {valid_acc:.5f} -> best")
+                print(f"[ Valid | {epoch + 1:03d}/{n_epochs:03d} ] loss = {valid_loss:.5g} -> best")
         else:
             with open(f"./{prefix}_log.txt","a"):
-                print(f"[ Valid | {epoch + 1:03d}/{n_epochs:03d} ] loss = {valid_loss:.5f}, acc = {valid_acc:.5f}")
-        return valid_acc
+                print(f"[ Valid | {epoch + 1:03d}/{n_epochs:03d} ] loss = {valid_loss:.5g}")
+        return valid_loss
 
     if len(train_losses) > 0:
         epoch = 0
-        best_acc = _validate(record=False)
+        best_MSE = _validate(record=False)
 
     for epoch in range(len(train_losses), n_epochs):
 
@@ -125,18 +124,18 @@ def train_model(model, optimizer, train_loader, valid_loader,
         _train()
 
         # ---------- Validation ----------
-        valid_acc = _validate()
+        valid_loss = _validate()
 
         end_time = time.time()
         epoch_duration = end_time - start_time
         print(f"Epoch {epoch+1} duration: {epoch_duration:.2f} seconds")
         # save models
-        if valid_acc > best_acc:
+        if valid_loss < best_MSE:
             print(f"Best model found at epoch {epoch}, saving model")
             torch.save(model.state_dict(), f"{prefix}_best.ckpt") # only save best
             with open(f"{prefix}_best.sum", "w") as fsum:
                 fsum.write(generate_checksum(f"{prefix}_best.ckpt"))
-            best_acc = valid_acc
+            best_MSE = valid_loss
             stale = 0
         else:
             stale += 1
@@ -144,7 +143,7 @@ def train_model(model, optimizer, train_loader, valid_loader,
                 print(f"No improvment {patience} consecutive epochs, early stopping")
                 break
         with open(f"{prefix}_loss.pkl", "wb") as fout:
-            pickle.dump({"train": train_losses, "validation": valid_losses, "valid_acc": valid_acc}, fout)
+            pickle.dump({"train": train_losses, "validation": valid_losses}, fout)
     return train_losses, valid_losses
 
 def load_model(model_path, loss_path = None):
@@ -239,7 +238,7 @@ def evaluate_model(model, test_loader):
     plt.figure(figsize=(5, 5))
     plt.imshow(cm, cmap="Blues")
     plt.colorbar()
-    
+
     # Add labels
     plt.xticks([0, 1], ["Human", "AI"])
     plt.yticks([0, 1], ["Human", "AI"])
@@ -250,9 +249,9 @@ def evaluate_model(model, test_loader):
         for j in range(2):
             plt.text(j, i, cm[i, j], ha="center", va="center", color="black", fontsize=14)
     plt.show()
-    
+
     # Extract values from the confusion matrix
-    TN, FP, FN, TP = cm.ravel()  
+    TN, FP, FN, TP = cm.ravel()
 
     # Compute accuracy
     accuracy = (TP + TN) / (TP + TN + FP + FN)
@@ -282,7 +281,7 @@ def evaluate_model(model, test_loader):
     plt.grid(True)
     plt.show()
 
-    # Compute AUC 
+    # Compute AUC
     auc = roc_auc_score(y_numpytrue, y_numpyprobs[:, 1], multi_class = "ovr")
 
     # Print results
