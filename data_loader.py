@@ -15,14 +15,15 @@ class data_loader:
         self.feature_path = feature_path
         self.label_path = label_path
         self.file_names = [os.path.basename(f) for f in glob(f"{feature_path}/*.npy")]
-        self.transform = lambda x: torch.tensor(np.transpose(x.astype(np.float32), (2, 0, 1)), dtype=torch.float32)
+        self.feature_transform = lambda x: torch.tensor(np.transpose(x.astype(np.float32), (2, 0, 1)), dtype=torch.float32)
+        self.label_transform = lambda x: torch.tensor(np.transpose(x.astype(np.float32), (2, 0, 1)), dtype=torch.float32)
 
     def __len__(self):
         return len(self.file_names)
 
     def __getitem__(self, idx: int):
-        return self.transform(np.load(os.path.join(self.feature_path, self.file_names[idx]))), \
-            self.transform(np.load(os.path.join(self.label_path, self.file_names[idx])))
+        return self.feature_transform(np.load(os.path.join(self.feature_path, self.file_names[idx]))), \
+            self.label_transform(np.load(os.path.join(self.label_path, self.file_names[idx])))
 
     def check(self):
         s_feature_names = set(self.file_names)
@@ -47,3 +48,9 @@ class data_loader:
         loader_args.update(kwargs)
         # return DataLoader(self.torch_wrapper(self), **loader_args)
         return DataLoader(self, **loader_args)
+
+class Mavirec_loader(data_loader):
+    def __init__(self, feature_path: str, label_path: str):
+        super().__init__(feature_path, label_path)
+        self.feature_transform = lambda x: torch.tensor(np.expand_dims(np.transpose(x.astype(np.float32), (2, 0, 1)), axis=0), dtype=torch.float32)
+        self.label_transform = lambda x: torch.tensor(np.transpose(x.astype(np.float32), (2, 0, 1)).squeeze(), dtype=torch.float32)

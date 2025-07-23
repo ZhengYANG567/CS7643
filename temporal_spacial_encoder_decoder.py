@@ -23,7 +23,7 @@ class FullModel(nn.Module):
         return self.decoder(latent, skips)
 
 def train_temporal_spacial_model(model, optimizer, train_loader, valid_loader,
-    n_epochs=50, patience=10, criterion=nn.MSELoss(),
+    n_epochs=50, patience=10, criterion=nn.MSELoss(), output_dir=".",
     train_losses=[], valid_losses=[], prefix="TemporalSpacial"):
 
     stale = 0
@@ -77,6 +77,7 @@ def train_temporal_spacial_model(model, optimizer, train_loader, valid_loader,
         return valid_loss
 
     if len(train_losses) > 0:
+        raise RuntimeError(f"len(train_losses) = {len(train_losses)}")
         epoch = 0
         best_MSE = _validate(epoch=0, record=False)
 
@@ -86,9 +87,9 @@ def train_temporal_spacial_model(model, optimizer, train_loader, valid_loader,
 
         if val_loss < best_MSE:
             print(f"Best model found at epoch {epoch}, saving model")
-            torch.save(model.state_dict(), f"{prefix}_best.ckpt")
-            with open(f"{prefix}_best.sum", "w") as fsum:
-                fsum.write(generate_checksum(f"{prefix}_best.ckpt"))
+            torch.save(model.state_dict(), f"{output_dir}/{prefix}_best.ckpt")
+            with open(f"{output_dir}/{prefix}_best.sum", "w") as fsum:
+                fsum.write(generate_checksum(f"{output_dir}/{prefix}_best.ckpt"))
             best_MSE = val_loss
             stale = 0
         else:
@@ -97,6 +98,6 @@ def train_temporal_spacial_model(model, optimizer, train_loader, valid_loader,
                 print(f"No improvement {patience} consecutive epochs, early stopping")
                 break
 
-        with open(f"{prefix}_loss.pkl", "wb") as fout:
+        with open(f"{output_dir}/{prefix}_loss.pkl", "wb") as fout:
             pickle.dump({"train": train_losses, "validation": valid_losses}, fout)
     return train_losses, valid_losses

@@ -182,7 +182,7 @@ def try_load_model(exp_name):
     else:
         return None, [], []
 
-def plot_losses(train_losses, valid_losses):
+def plot_losses(train_losses, valid_losses, img_path=None):
     plt.figure(figsize=(10, 5))
     # plt.plot(range(1, len(train_losses) + 1), train_losses, label='Train Loss')
     # plt.plot(range(1, len(valid_losses) + 1), valid_losses, label='Valid Loss')
@@ -195,7 +195,10 @@ def plot_losses(train_losses, valid_losses):
     plt.legend()
     plt.grid()
     plt.tight_layout()
-    plt.show()
+    if img_path == None:
+        plt.show()
+    else:
+        plt.savefig(img_path)
 
 def evaluate_model(model, test_loader):
     model.eval()

@@ -123,3 +123,24 @@ def generate_checksum(filepath, algorithm='md5'):
     except Exception as e:
         print(f"Error generating checksum: {e}")
         return None
+
+class CustomHelpFormatter(argparse.HelpFormatter):
+    def _get_help_string(self, action):
+        help_msg = action.help
+        if action.required:
+            help_msg += f" {RED}(required){RESET}"
+        if action.default is not argparse.SUPPRESS and action.default is not None:
+            help_msg += f" {GRAY}(default: {action.default}){RESET}"
+        return help_msg
+
+    def start_section(self, heading):
+        if heading == 'positional arguments' or heading == 'optional arguments':
+            super().start_section(heading)
+        else:
+            super().start_section(f"{BOLD}{BLUE}{heading}{RESET}")
+
+def get_parser(add_verbose=False):
+    parser = argparse.ArgumentParser(formatter_class=CustomHelpFormatter)
+    parser.add_argument("--verbose", "-v", action="store_true",
+        help = "Increase verbosity level")
+    return parser
