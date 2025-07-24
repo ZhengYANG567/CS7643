@@ -35,7 +35,6 @@ class TSED_explorer(ML_explorer):
         super().__init__(train_loader, valid_loader, output_dir, train_config)
     def __call__(self, trial):
         base_features = trial.suggest_categorical("base_features", [32, 64, 128, 256])
-        # num_layers = trial.suggest_int("num_layers", 2, 5)
         temporal_encoder_config = {
             "embed_dim": trial.suggest_categorical("temporal_encoder.embed_dim", [128, 256, 512, 1024, 2048]),
             "num_heads": trial.suggest_categorical("temporal_encoder.num_heads", [2, 4, 8, 16, 32, 64]),
@@ -43,9 +42,7 @@ class TSED_explorer(ML_explorer):
             "mlp_ratio": trial.suggest_float("temporal_encoder.mlp_ratio", 1.0, 7.0),
         }
         spacial_encoder_config = {
-            # "base_features": trial.suggest_int("spacial_encoder.base_features", 32, 256),
             "base_features": base_features,
-            # "num_layers": num_layers,
             "num_layers": trial.suggest_int("spacial_encoder.num_layers", 1, 4),
         }
 
@@ -53,7 +50,6 @@ class TSED_explorer(ML_explorer):
 
         decoder_config = {
             "out_channels": 1,
-            # "num_layers": num_layers,
             "num_layers": s_layers,
             "bottleneck_channels": base_features * (2 ** s_layers),
         }

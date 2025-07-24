@@ -36,8 +36,10 @@ def train_temporal_spacial_model(model, optimizer, train_loader, valid_loader,
 
         for batch in tqdm(train_loader):
             feature, label = batch
-            temporal_input = feature[:, :20].to(device)
-            extra_input = feature[:, 20:].to(device)
+            # temporal_input = feature[:, :20].to(device)
+            # extra_input = feature[:, 20:].to(device)
+            temporal_input = feature[:, 4:].to(device)
+            extra_input = feature[:, :4].to(device)
             label = label.to(device)
             optimizer.zero_grad()
             output = model(temporal_input, extra_input)
