@@ -69,7 +69,8 @@ class TSED_explorer(ML_explorer):
             torch.cuda.empty_cache()
             model.to(device)
         criterion = nn.MSELoss()
-        optimizer = optim.Adam(model.parameters(), lr=trial.suggest_float("learning_rate", 5e-5, 1e-2, log=True))
+        # optimizer = optim.Adam(model.parameters(), lr=trial.suggest_float("learning_rate", 5e-5, 1e-2, log=True))
+        optimizer = optim.Adam(model.parameters(), lr=4e-3)
 
         train_losses, valid_losses = train_temporal_spacial_model(model, optimizer, self.train_loader, self.valid_loader, criterion = criterion, **self.train_config)
         ret = min(valid_losses)

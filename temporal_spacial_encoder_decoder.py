@@ -60,8 +60,10 @@ def train_temporal_spacial_model(model, optimizer, train_loader, valid_loader,
 
         for batch in tqdm(valid_loader):
             imgs, labels = batch
-            temporal_input = imgs[:, :20].to(device)
-            extra_input = imgs[:, 20:].to(device)
+            # temporal_input = imgs[:, :20].to(device)
+            # extra_input = imgs[:, 20:].to(device)
+            temporal_input = imgs[:, 4:].to(device)
+            extra_input = imgs[:, :4].to(device)
             labels = labels.to(device)
             with torch.no_grad():
                 logits = model(temporal_input, extra_input)
