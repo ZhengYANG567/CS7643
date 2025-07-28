@@ -6,6 +6,9 @@ from util import generate_checksum
 from temporal_encoder import *
 from spacial_encoder import *
 from unet_decoder import *
+import matplotlib.pyplot as plt
+import os
+import random
 
 class FullModel(nn.Module):
     def __init__(self, temp_config={}, spacial_config={}, decoder_config={}):
@@ -105,3 +108,50 @@ def train_temporal_spacial_model(model, optimizer, train_loader, valid_loader,
         with open(f"{output_dir}/{prefix}_loss.pkl", "wb") as fout:
             pickle.dump({"train": train_losses, "validation": valid_losses}, fout)
     return train_losses, valid_losses
+
+def load_model_TESD(model_path, temp_config, spacial_config, decoder_config, device=None):
+    if device is None:
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        
+    model = FullModel(temp_config, spacial_config, decoder_config).to(device)
+    model.load_state_dict(torch.load(model_path, map_location=device))
+    model.eval()
+    return model
+
+def evaluate_single_sample_TESD(model, valid_loader, output_path='comparison.png', device=None):
+    if device is None:
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    batches = list(valid_loader)
+    batch = random.choice(batches)
+    
+    feature_batch, label_batch = batch
+    idx = random.randint(0, feature_batch.size(0) - 1)
+
+    feature = feature_batch[idx].unsqueeze(0).to(device)  # Shape: (1, C, H, W)
+    label = label_batch[idx].unsqueeze(0).to(device)      # Shape: (1, 1, H, W)
+
+    temporal_input = feature[:, 4:]  # (1, T, H, W)
+    extra_input = feature[:, :4]     # (1, 4, H, W)
+
+    model.eval()
+    with torch.no_grad():
+        output = model(temporal_input, extra_input)
+
+    pred_img = output[0].squeeze().cpu().numpy()
+    true_img = label[0].squeeze().cpu().numpy()
+
+    fig, axs = plt.subplots(1, 2, figsize=(10, 5))
+    axs[0].imshow(true_img, cmap='gray')
+    axs[0].set_title('Ground Truth')
+    axs[0].axis('off')
+
+    axs[1].imshow(pred_img, cmap='gray')
+    axs[1].set_title('Model Output')
+    axs[1].axis('off')
+
+    plt.tight_layout()
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    plt.savefig(output_path)
+    plt.close()
+    print(f"Comparison image saved to {output_path}")
